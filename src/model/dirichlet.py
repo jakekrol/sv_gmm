@@ -181,7 +181,9 @@ def run_dirichlet(
 
         # Run the model to get the next outcome
         gmm_result, evidence_by_mode = run_trial(reads, **kwargs)
-        if gmm_result is None:  # all samples are filtered out
+
+        # all samples are filtered out or all models are invalid
+        if gmm_result is None:
             gmm_results.append((None, []))
             print(f"{chr}:{L}-{R} - stopping due to gmm_result = None")
             break

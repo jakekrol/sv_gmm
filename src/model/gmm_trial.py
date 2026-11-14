@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import numpy as np
 import pandas as pd
 import matplotlib.cm as cm
@@ -622,6 +624,11 @@ def process_data(
     for sample_id, group in reads.groupby("sample_id"):
         sample_reads = group.copy()
 
+        # keep only reads where R > L
+        sample_reads = sample_reads[
+            sample_reads["r_start"] > sample_reads["l_end"]
+        ]
+
         if not sample_summary:
             # loop through all reads for the sample and add them to points
             for _, row in sample_reads.iterrows():
@@ -714,8 +721,13 @@ def process_data(
         # take the innermost bounds of all the sample's reads as the inferred SV coordinates for this sample
         max_l = int(max(ls))
         min_r = int(min(rs))
-        svlen = min_r - max_l
 
+        # skip the sample if the inferred SV coordinates are invalid (i.e. end before start)
+        # this could be due to heterozygosity or noise
+        if min_r <= max_l:
+            continue
+
+        svlen = min_r - max_l
         sv_evidence.append(
             Evidence(
                 sample=Sample(id=sample_id),
@@ -756,6 +768,7 @@ def gmm_trial(
     plot: bool = True,
     plot_file: str | None = None,
     force_n_modes: int | None = None,
+    verbose: bool = False,
 ):
     """Runs the GMM pipeline and visualizes the results."""
     # transforms data to cluster
@@ -788,14 +801,14 @@ def gmm_trial(
         force_n_modes=force_n_modes,
     )
 
+    if gmm_result is None:
+        if verbose:
+            warnings.warn("GMM failed to converge.")
+        return None, []
+
     if not synthetic_data:
-        populate_sample_info(
-            sv_evidence,
-            chr,
-            L,
-            R,
-            stem=stem,
-        )  # mutates sv_evidence with ancestry data and homo/heterozygous for each sample
+        # mutates sv_evidence with ancestry data and homo/heterozygous for each sample
+        populate_sample_info(sv_evidence, chr, L, R, stem=stem)
 
     evidence_by_mode = get_evidence_by_mode(gmm_result, sv_evidence)
 
@@ -816,16 +829,5 @@ def gmm_trial(
             repulsion=repulsion,
             scale_axes=False,
         )
-        # plot_single_sv(
-        #     evidence_by_mode,
-        #     sv_id=sv_id,
-        #     L=L,
-        #     R=R,
-        #     axis1="L",
-        #     axis2="Length",
-        #     add_error_bars=False,
-        #     size_by="insert_size",
-        #     color_by="mode",
-        # )
 
     return gmm_result, evidence_by_mode

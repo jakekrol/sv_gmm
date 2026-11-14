@@ -101,7 +101,7 @@ def run_dirichlet_inner(
         samples_to_keep=list(
             sample_ids
         ),  # keep only samples with long reads (used in genotyping)
-        print_messages=False,
+        verbose=False,
     )
 
     chr, L, R = row["chr"], row["start"], row["stop"]

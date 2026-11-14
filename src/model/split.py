@@ -56,7 +56,7 @@ def split_sv(
     single_trial: bool = True,
     parallel: bool = False,
     plot: bool = True,
-    print_messages: bool = True,
+    verbose: bool = True,
 ):
     # check that the user inputted an sv id or sv coordinates
     if sv_id == "" and (l == "" or r == ""):
@@ -126,7 +126,7 @@ def split_sv(
             slop,
         )
     else:
-        if print_messages:
+        if verbose:
             print("Using previously-queried data from", stix_file, "\n")
 
     # load the data as a dataframe
@@ -166,6 +166,7 @@ def split_sv(
                 stem=input_dir,
                 plot_file=os.path.join(plot_dir, file_name),
                 insert_size_lookup=insert_size_lookup,
+                verbose=verbose,
             )
         else:
             run_dirichlet(

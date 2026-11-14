@@ -387,9 +387,12 @@ def calc_icl(
 
 def model_is_valid(
     gmm_result: GMM2D,
+    L: int,
+    R: int,
     num_modes: int,
     gz: np.ndarray,
     samples: list[Evidence],
+    verbose: bool,
 ):
     """
     Checks if the model is valid by verifying that clusters are sufficiently far apart based on read type.
@@ -404,6 +407,15 @@ def model_is_valid(
     samples = np.array(samples)
     is_valid = True
     for i in range(num_modes):
+        mu_i = gmm_result.mu[i]
+        if (mu_i[1] + R) <= (mu_i[0] + L):
+            is_valid = False
+            if verbose:
+                print(
+                    "Model is invalid: cluster centroids violate the constraint L < R."
+                )
+            break
+
         for j in range(i + 1, num_modes):
             # get read composition of each cluster
             samples_i = samples[assignments == i]
@@ -411,7 +423,6 @@ def model_is_valid(
             samples_j = samples[assignments == j]
             read_types_j = Counter([s.evidence_type for s in samples_j])
 
-            mu_i = gmm_result.mu[i]
             mu_j = gmm_result.mu[j]
             l_coord_dist = abs(mu_i[0] - mu_j[0])
             r_coord_dist = abs(mu_i[1] - mu_j[1])
@@ -431,6 +442,10 @@ def model_is_valid(
                     is_valid = False
 
             if is_valid is False:
+                if verbose:
+                    print(
+                        "Model is invalid: clusters are too close together based on read type."
+                    )
                 break
 
     return is_valid
@@ -438,10 +453,13 @@ def model_is_valid(
 
 def score_model(
     gmm_result: GMM2D,
+    L: int,
+    R: int,
     num_modes: int,
     samples: list[Evidence],
     gz: np.ndarray,
     f: str = "aic",
+    verbose: bool = False,
 ) -> float:
     """Calculates the penalized log-likelihood using the specified model selection criterion."""
     logL = gmm_result.logL
@@ -456,7 +474,7 @@ def score_model(
     else:
         raise ValueError(f"Invalid model selection criterion: {f}")
 
-    is_valid = model_is_valid(gmm_result, num_modes, gz, samples)
+    is_valid = model_is_valid(gmm_result, L, R, num_modes, gz, samples, verbose)
     return score, is_valid
 
 
@@ -811,7 +829,7 @@ def assign_values_to_modes(
     return gz, x_by_mode, x_index_by_mode, outliers
 
 
-def select_model(x: np.ndarray, model_results: dict):
+def select_model(x: np.ndarray, model_results: dict, verbose: bool):
     """
     Selects the optimal GMM model based on the log-likelihood scores. Checks
     that each model is valid by verifying that all clusters have at least one
@@ -835,8 +853,8 @@ def select_model(x: np.ndarray, model_results: dict):
         if best_model is None or model["score"] < best_model["score"]:
             best_model = model
 
-    if best_model is None:
-        raise ValueError("No valid models found.")
+    if best_model is None and verbose:
+        print("No valid models found.")
 
     return best_model
 
@@ -855,6 +873,7 @@ def gmm(
     model_comparison_func: str = "bic",
     force_n_modes: int | None = None,
     plot: bool = False,
+    verbose: bool = False,
 ) -> EstimatedGMM2D | None:
     """
     Runs the GMM estimation process to determine the number of structural variants in a DNA reading frame.
@@ -939,10 +958,13 @@ def gmm(
 
                 model_score, valid = score_model(
                     params[-1],
+                    L,
+                    R,
                     num_sv_post_merge,
                     samples,
                     responsibility,
                     f=model_comparison_func,
+                    verbose=verbose,
                 )
 
                 # num_modes and num_sv_post_merge may differ
@@ -965,7 +987,10 @@ def gmm(
                     "merged": False,
                 }
 
-        best_model = select_model(x, model_results)
+        best_model = select_model(x, model_results, verbose)
+
+    if best_model is None:
+        return None
 
     final_iter = best_model["params"][-1]
     num_sv = best_model["num_sv"]

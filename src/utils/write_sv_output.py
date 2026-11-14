@@ -22,7 +22,7 @@ from src.utils.helper import (
     get_svlen,
     df_to_bed,
 )
-from src.utils.model_helper import calc_af, reciprocal_overlap, giggle_format
+from src.utils.model_helper import calc_af, giggle_format
 
 from src.utils.types import (
     SVInfoGMM,
@@ -125,7 +125,7 @@ def get_raw_data(
     slop: int = 500,
     filter_reference_samples: bool = True,
     samples_to_keep: list[str] | None = None,
-    print_messages: bool = True,
+    verbose: bool = True,
 ) -> tuple[dict[str, np.ndarray[float]], int]:
     """
     Gets the samples and evidence for an SV. Filters out samples that are homozygous for the reference allele.
@@ -157,7 +157,7 @@ def get_raw_data(
         run_split=False,
         filter_reference=False,
         parallel=True,
-        print_messages=print_messages,
+        verbose=verbose,
     )
     num_samples = reads["sample_id"].nunique()
 

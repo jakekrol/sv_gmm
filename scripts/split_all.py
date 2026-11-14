@@ -40,7 +40,7 @@ def run_split_trial(
     chr, L, R = row["chr"], row["start"], row["stop"]
     input_dir = cfg["paths"]["input_dir"]
     reads, num_samples = get_raw_data(
-        row, cfg, filter_reference_samples=True, print_messages=False
+        row, cfg, filter_reference_samples=True, verbose=False
     )
 
     # load model parameters from the config file
