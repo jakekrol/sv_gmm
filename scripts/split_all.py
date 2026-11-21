@@ -131,11 +131,16 @@ def download_stix_data_inner(row: pd.Series, cfg: dict):
         query_region,
         output_dir,
         cfg["stix"]["bin"],
-        cfg["stix"]["index"],
-        cfg["stix"]["database"],
-        cfg["stix"]["num_shards"],
+        cfg["stix"]["shardfile"],
+        # cfg["stix"]["index"],
+        # cfg["stix"]["database"],
+        # cfg["stix"]["num_shards"],
         True,
     )
+    # debug
+    print("# DEBUG exit after 1 query set")
+    import sys
+    sys.exit()
     print(f"Downloaded STIX data {stix_file}", flush=True)
 
 
